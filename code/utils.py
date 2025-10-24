@@ -1,7 +1,7 @@
 # utils.py
 
 import pygame as pg
-from code.Const import TILE_SIZE, TILE_ASSET_PATHS, SCREEN_WIDTH, SCREEN_HEIGHT
+from code.Const import TILE_SIZE, TILE_ASSET_PATHS, SCREEN_WIDTH, SCREEN_HEIGHT, AUDIO_PATHS
 
 
 def load_and_scale_image(path, size, flip=False):
@@ -58,8 +58,7 @@ def load_terrain_assets():
 
 def load_background_assets():
     """Carrega os assets de fundo (BG, nuvens, água)."""
-    assets = {'background': load_and_scale_image('./asset/Palm Tree Island/Background/BG Image.png',
-                                                 (SCREEN_WIDTH, SCREEN_HEIGHT)),
+    assets = {'background': load_and_scale_image('./asset/Palm Tree Island/Background/BG Image.png',(SCREEN_WIDTH, SCREEN_HEIGHT)),
               'big_clouds': load_and_scale_image('./asset/Palm Tree Island/Background/Big Clouds.png', (896, 202)),
               'small_cloud_1': load_and_scale_image('./asset/Palm Tree Island/Background/Small Cloud 1.png', (148, 48)),
               'small_cloud_2': load_and_scale_image('./asset/Palm Tree Island/Background/Small Cloud 2.png', (266, 70)),
@@ -97,3 +96,48 @@ def load_background_assets():
             assets[w_key].append(load_and_scale_image(path, size))
 
     return assets
+
+
+def load_entity_assets(assets=None):
+    if assets is None:
+        assets = {}
+    """Carrega assets de inimigos, itens e armadilhas."""
+    tooth_size = (64, 64)
+    assets['tooth'] = []
+    tooth_base_path = './asset/enemies/Fierce Tooth/idle/'
+    for i in range(1, 6):  # Tooth 1 a 6
+        assets['tooth'].append(load_and_scale_image(f'{tooth_base_path}{i}.png', tooth_size))
+
+    # Exemplo: Moeda
+    coin_size = (32, 32)
+    assets['coin'] = []
+    coin_base_path = './asset/items/coin/Gold Coin/'
+    for i in range(1, 4):  # Coin 1 a 4
+        assets['coin'].append(load_and_scale_image(f'{coin_base_path}{i}.png', coin_size))
+
+    # Exemplo: Espeto (Trap)
+    assets['spike_ball'] = load_and_scale_image('./asset/trap/spike_ball/Spiked Ball.png', (TILE_SIZE, TILE_SIZE))
+
+    return assets
+
+
+def load_audio():
+    """Carrega os arquivos de áudio."""
+    pg.mixer.init()
+    audio = {}
+    try:
+        audio['bg'] = AUDIO_PATHS['bg']
+        audio['jump'] = pg.mixer.Sound(AUDIO_PATHS['jump'])
+        audio['coin'] = pg.mixer.Sound(AUDIO_PATHS['coin'])
+
+        # Define o volume para SFX (opcional)
+        audio['jump'].set_volume(0.5)
+        audio['coin'].set_volume(0.8)
+
+    except pg.error as e:
+        print(f"Erro ao carregar áudio. Verifique os caminhos no Const.py. Erro: {e}")
+        # Cria objetos Sound vazios para evitar quebra
+        audio['jump'] = pg.mixer.Sound(pg.sndarray.make_sound([[0]]))
+        audio['coin'] = pg.mixer.Sound(pg.sndarray.make_sound([[0]]))
+
+    return audio

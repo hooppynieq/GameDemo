@@ -6,11 +6,13 @@ from code.Const import PLAYER_COLLIDER_SIZE, GRAVITY, TILE_SIZE, PLAYER_JUMP_FOR
 from code.utils import load_player_assets
 
 class Player(pg.sprite.Sprite):
-    def __init__(self, start_pos, game_map):
+    def __init__(self, start_pos, game_map, map_width_pixels):
         super().__init__()
 
         # Mapa para Colisão
         self.game_map = game_map
+
+
 
         # Assets
         self.animations = load_player_assets()
@@ -34,6 +36,11 @@ class Player(pg.sprite.Sprite):
         self.collider_offset_y = 8
         self.collider = pg.Rect(self.pos[0] + self.collider_offset_x, self.pos[1] + self.collider_offset_y,
                                 PLAYER_COLLIDER_SIZE[0], PLAYER_COLLIDER_SIZE[1])
+
+        # Limite do mundo
+        self.map_width_pixels = map_width_pixels
+        self.min_x = 0
+        self.max_x = map_width_pixels - PLAYER_COLLIDER_SIZE[0] - self.collider_offset_x
 
     def _apply_gravity(self):
         """Aplica a gravidade e a velocidade vertical."""
@@ -108,56 +115,61 @@ class Player(pg.sprite.Sprite):
         Atualiza a posição horizontal e o estado de animação baseado nas teclas pressionadas.
         CORRIGIDO: Lógica para manter a direção IDLE.
         """
-
-        # 1. Movimento Horizontal
+        # 1. Movimento Horizontal e Limites do Mundo
         moved = False
         move_dir = ''
-
-        # Garante que current_direction sempre é definido com base no estado atual
-        current_direction = 'right' if 'right' in self.state else 'left'
+        new_x = self.pos[0]  # Posição inicial para o cálculo
 
         # Left (A)
         if keys_pressed[pg.K_a]:
-            self.pos[0] -= PLAYER_SPEED
-            self.collider.left = self.pos[0] + self.collider_offset_x
-            self._check_collision_x('left')
+            new_x -= PLAYER_SPEED
             move_dir = 'left'
             moved = True
 
         # Right (D)
         if keys_pressed[pg.K_d]:
-            self.pos[0] += PLAYER_SPEED
-            self.collider.left = self.pos[0] + self.collider_offset_x
-            self._check_collision_x('right')
+            new_x += PLAYER_SPEED
             move_dir = 'right'
             moved = True
 
-        # 2. Atualização do Estado
-        new_state = self.state  # Começa com o estado atual
+        # APLICAÇÃO DO LIMITE HORIZONTAL (Mantendo sua lógica correta)
+        new_x = max(self.min_x, new_x)
+        new_x = min(self.max_x, new_x)
+
+        # 2. Atualiza Posição e Colisão X
+        if self.pos[0] != new_x:
+            self.pos[0] = new_x
+            self.collider.left = self.pos[0] + self.collider_offset_x
+
+            # Colisão X pode reajustar self.pos[0] se bater em uma parede
+            self._check_collision_x(move_dir)
+
+        # 3. Atualização do Estado de Animação (CORRIGIDA)
+
+        # Obtém a direção atual (esquerda/direita) do estado.
+        current_direction: str = 'right' if 'right' in self.state else 'left'
+        new_state = self.state
 
         if moved:
-            # 2a. Em Movimento (Corrida)
+            # CORREÇÃO: Usamos 'new_state' de forma consistente para RUN
             if move_dir == 'right':
                 new_state = 'run_right'
             elif move_dir == 'left':
                 new_state = 'run_left'
-
-            # Atualiza a direção conhecida
             current_direction = move_dir
-
         else:
-            # 2b. Parado (IDLE) - Usa a última direção conhecida
+            # Lógica para IDLE
             if current_direction == 'right':
                 new_state = 'idle_right'
             else:
                 new_state = 'idle_left'
 
-        # 3. Transição de Estado e Reset de Frame
+        # Transição de Estado e Reset (Se o estado MUDOU, reinicia o frame)
         if new_state != self.state:
-            self.current_frame = 0  # Reinicia a animação ao trocar de estado
+            self.current_frame = 0
             self.animation_timer = 0
 
-        self.state = new_state
+        self.state = new_state  # Aplica o novo estado final
 
     def _animate(self):
         """
@@ -184,8 +196,10 @@ class Player(pg.sprite.Sprite):
         # Define a imagem
         self.image = current_animation[self.current_frame]
 
-    def update(self):
-        """Lógica de atualização do jogador: gravidade, colisão e animação."""
+    def update(self, offset_x):
+        """Lógica de atualização do jogador: gravidade, colisão e animação.
+        Recebe o offset para atualizar a posição de desenho.
+        """
 
         # 1. Gravidade e Colisão Vertical
         self._apply_gravity()
@@ -194,5 +208,5 @@ class Player(pg.sprite.Sprite):
         # 2. Animação
         self._animate()
 
-        # 3. Atualiza o rect principal para o desenho
-        self.rect.topleft = self.pos
+        # 3. Atualiza o rect principal para o desenho (APLICA O OFFSET)
+        self.rect.topleft = (self.pos[0] + offset_x, self.pos[1])
