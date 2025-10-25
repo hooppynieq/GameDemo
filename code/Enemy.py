@@ -44,35 +44,16 @@ class Enemy(pg.sprite.Sprite):
         self.image = self.animations[self.state][0]
         self.rect = self.image.get_rect(topleft=self.pos)
 
-        # [CORREÇÃO DE ELEVAÇÃO] Calcula a posição Y correta para alinhar a BASE do inimigo
-        # (self.rect.bottom) com a BASE do tile (start_pos[1] + TILE_SIZE).
-
-        # A nova posição Y (top) será: (Y do chão) - (Altura da imagem)
+        # 1. Calcular o Y do chão (bottom do tile)
         tile_bottom_y = start_pos[1] + TILE_SIZE
-        sprite_height = self.image.get_height()
 
-        # Define a posição inicial com o Y corrigido
-        self.pos = [start_pos[0], tile_bottom_y - sprite_height]
-
-        self.rect.topleft = self.pos
-
-        # Collider (Agora alinhado corretamente com o rect)
-        self.collider = self.rect.copy()  # Usamos uma cópia para fins de colisão se necessário
+        # Collider
+        self.collider = self.rect
         self.on_ground = False
 
-        # Removido: as linhas de ajuste desnecessárias (self.pos[1] -= 1, etc.)
-
-        # # Imagem e Rect
-        # self.image = self.animations[self.state][0]
-        # self.rect = self.image.get_rect(topleft=self.pos)
-        #
-        # # Collider
-        # self.collider = self.rect
-        # self.on_ground = False
-        #
-        # self.pos[1] -= 1
-        # self.rect.top = self.pos[1]
-        # self.collider.top = self.pos[1]
+        self.pos[1] -= 1
+        self.rect.top = self.pos[1]
+        self.collider.top = self.pos[1]
 
     # ----------------------------------------------------------------------
     # MÉTODOS DE FÍSICA E COLISÃO (Inalterados)
