@@ -184,15 +184,15 @@ class Game:
     def draw(self):
         """Desenha todos os elementos na tela."""
         self._update_background_and_clouds()
-        self._draw_tiles()
 
         # Desenha Água Animada
         self._animate_water('big_water', [(300, 550)])
         self._animate_water('medium_water', [(250, 600), (500, 625)])
         self._animate_water('small_water', [(1000, 600), (900, 625)])
+        self._draw_tiles()
 
         # NOVO: Desenha Decorações (antes de itens e inimigos, geralmente)
-        self.decorations.draw(self.screen)
+        # self.decorations.draw(self.screen)
 
         # Desenha Entidades
         self.items.draw(self.screen)

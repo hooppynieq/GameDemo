@@ -2,12 +2,13 @@
 
 import pygame as pg
 
-from code.Const import PLAYER_COLLIDER_SIZE, GRAVITY, TILE_SIZE, PLAYER_JUMP_FORCE, PLAYER_SPEED, PLAYER_ANIMATION_SPEED
+from code.Const import PLAYER_COLLIDER_SIZE, GRAVITY, TILE_SIZE, PLAYER_JUMP_FORCE, PLAYER_SPEED, PLAYER_ANIMATION_SPEED, DECORATION_MAP_CODES, ITEM_MAP_CODES
 from code.utils import load_player_assets
 
 class Player(pg.sprite.Sprite):
     def __init__(self, start_pos, game_map, map_width_pixels):
         super().__init__()
+        self._non_solid_chars = set(DECORATION_MAP_CODES.keys()).union(set(ITEM_MAP_CODES.keys()))
 
         # Mapa para Colisão
         self.game_map = game_map
@@ -61,11 +62,15 @@ class Player(pg.sprite.Sprite):
 
         for y in range(start_row, end_row):
             for x in range(start_col, end_col):
-                if self.game_map[y][x] != ' ':
+                tile_map_char = self.game_map[y][x] # Pega o caractere
+
+                # CORREÇÃO: Ignora ' ' E qualquer código em DECORATION_MAP_CODES
+                if tile_map_char != ' ' and tile_map_char not in self._non_solid_chars:
                     tile_rect = pg.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
                     if self.collider.colliderect(tile_rect):
                         collided = True
+
                         if self.vertical_speed > 0:  # Caindo (colisão por baixo)
                             self.pos[1] = tile_rect.top - self.collider_offset_y - PLAYER_COLLIDER_SIZE[1]
                             self.vertical_speed = 0
@@ -91,7 +96,9 @@ class Player(pg.sprite.Sprite):
 
         for y in range(start_row, end_row):
             for x in range(start_col, end_col):
-                if self.game_map[y][x] != ' ':
+                tile_map_char = self.game_map[y][x]  # Pega o caractere
+                # CORREÇÃO: Ignora ' ' E qualquer código em DECORATION_MAP_CODES
+                if tile_map_char != ' ' and tile_map_char not in self._non_solid_chars:
                     tile_rect = pg.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
                     if self.collider.colliderect(tile_rect):
