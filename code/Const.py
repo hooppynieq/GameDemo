@@ -36,6 +36,9 @@ ENEMY_SPEED = 2
 ENEMY_ANIMATION_SPEED = 10
 ENEMY_COLLIDER_SIZE = (30, 30)
 
+# Raio de AGGREGAÇÃO
+AGGRO_RANGE = 300
+
 # --- Mapeamento do Mundo (Expandido para 40 tiles de largura) ---
 GAME_MAP = [
     [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
@@ -44,12 +47,12 @@ GAME_MAP = [
     [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
     [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
     [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'I', 'I', 'I', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'H', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
     [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '1', '3', ' ', '1', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2'],
-    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '1', '2', '3', ' ', '7', '9', ' ', '4', '5', '6', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-    [' ', ' ', ' ', ' ', ' ', ' ', ' ', 'T', ' ', ' ', '7', '8', '9', ' ', ' ', ' ', ' ', '4', '5', '6', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-    [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '4', '5', '6', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
-    ['2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '5', '5', '5', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2'],
+    ['3', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '1', '2', '3', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    ['5', '3', ' ', ' ', ' ', ' ', ' ', 'T', ' ', ' ', '7', '8', '9', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    ['5', '6', ' ', '$', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+    ['2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2', '2'],
 ]
 
 # Mapeamento dos Tiles
@@ -65,14 +68,42 @@ TILE_ASSET_PATHS = {
     '9': './asset/Palm Tree Island/Terrain/ground_9.png',
 }
 
-ENTITY_ASSET_PATHS = {
-    # Inimigos
-    'E': './asset/enemies/Fierce Tooth/idle/Idle 01.png', # Placeholder
-    # Itens
-    'I': './asset/items/Coin/Gold Coin/01.png', # Coin Placeholder
-    # Armadilhas
-    'T': './asset/trap/spike_ball/Spiked Ball.png', # Spike Trap
+# --- Caminhos dos Assets de Decoração ---
+DECORATION_ASSET_PATHS = {
+    'palm_tree_1': './asset/Palm Tree Island/objects/bg_palm_1.png',
+    'palm_tree_2': './asset/Palm Tree Island/objects/bg_palm_left.png',
+    'palm_tree_3': './asset/Palm Tree Island/objects/bg_palm_right.png',
+    'barrel_1': './asset/Palm Tree Island/objects/barrel.png',
+    'barrel_2': './asset/Palm Tree Island/objects/bg_barrel.png',
+    'barrel_3': './asset/Palm Tree Island/objects/bg_barrel_2.png',
+    'flag': './asset/Palm Tree Island/objects/flag.png',
+    'helm': './asset//Palm Tree Island/objects/Ship Helm/1.png'
+    # Adicione aqui todos os seus objetos estáticos
 }
+
+# --- Mapeamento de Nível para Decoração (ADICIONE CÓDIGOS) ---
+# Use códigos que não sejam usados para tiles (Ex: 'T' para árvore, 'B' para arbusto)
+DECORATION_MAP_CODES = {
+    'P': 'palm_tree_1',
+    'U': 'palm_tree_2',
+    'B': 'palm_tree_2',
+    'F': 'flag',
+    'H': 'helm'
+    # Adicione aqui todos os códigos que você usará no mapa
+}
+# --- Mapeamento de Nível para ITENS (Certifique-se que o helm não está aqui!) ---
+ITEM_MAP_CODES = {
+    '$': 'coin',
+
+}
+# ENTITY_ASSET_PATHS = {
+#     # Inimigos
+#     'E': './asset/enemies/Fierce Tooth/idle/Idle 01.png', # Placeholder
+#     # Itens
+#     'I': './asset/items/Coin/Gold Coin/01.png', # Coin Placeholder
+#     # Armadilhas
+#     'T': './asset/trap/spike_ball/Spiked Ball.png', # Spike Trap
+# }
 
 # --- Configurações de Áudio ---
 AUDIO_PATHS = {

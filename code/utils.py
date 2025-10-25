@@ -1,7 +1,7 @@
 # utils.py
 
 import pygame as pg
-from code.Const import TILE_SIZE, TILE_ASSET_PATHS, SCREEN_WIDTH, SCREEN_HEIGHT, AUDIO_PATHS
+from code.Const import TILE_SIZE, TILE_ASSET_PATHS, SCREEN_WIDTH, SCREEN_HEIGHT, AUDIO_PATHS, DECORATION_ASSET_PATHS
 
 
 def load_and_scale_image(path, size, flip=False):
@@ -58,20 +58,14 @@ def load_terrain_assets():
 
 def load_background_assets():
     """Carrega os assets de fundo (BG, nuvens, água)."""
-    assets = {'background': load_and_scale_image('./asset/Palm Tree Island/Background/BG Image.png',(SCREEN_WIDTH, SCREEN_HEIGHT)),
+    assets = {'background': load_and_scale_image('./asset/Palm Tree Island/Background/BG Image.png',
+                                                 (SCREEN_WIDTH, SCREEN_HEIGHT)),
               'big_clouds': load_and_scale_image('./asset/Palm Tree Island/Background/Big Clouds.png', (896, 202)),
               'small_cloud_1': load_and_scale_image('./asset/Palm Tree Island/Background/Small Cloud 1.png', (148, 48)),
               'small_cloud_2': load_and_scale_image('./asset/Palm Tree Island/Background/Small Cloud 2.png', (266, 70)),
               'small_cloud_3': load_and_scale_image('./asset/Palm Tree Island/Background/Small Cloud 3.png', (280, 78))}
 
-    # Background e Nuvens
-
     # Animações da Água
-    # utils.py
-
-    # ... (código anterior da função load_background_assets)
-
-    # Animações da Água - Corrigido o mapeamento dos nomes de arquivo
     water_map = {
         'big_water': 'Water Reflect Big',
         'medium_water': 'Water Reflect Medium',
@@ -90,8 +84,6 @@ def load_background_assets():
         base_path = './asset/Palm Tree Island/Background/'
 
         for i in range(1, 5):  # De 01 a 04
-            # O nome do arquivo é AGORA construído corretamente:
-            # Ex: './asset/Palm Tree Island/Background/Water Reflect Big 01.png'
             path = f'{base_path}{base_name} {i:02d}.png'
             assets[w_key].append(load_and_scale_image(path, size))
 
@@ -102,20 +94,29 @@ def load_entity_assets(assets=None):
     if assets is None:
         assets = {}
     """Carrega assets de inimigos, itens e armadilhas."""
-    tooth_size = (64, 64)
-    assets['tooth'] = []
-    tooth_base_path = './asset/enemies/Fierce Tooth/idle/'
-    for i in range(1, 6):  # Tooth 1 a 6
-        assets['tooth'].append(load_and_scale_image(f'{tooth_base_path}{i}.png', tooth_size))
 
-    # Exemplo: Moeda
+    tooth_size = (64, 64)
+    tooth_base_path = './asset/enemies/Fierce Tooth/'
+
+    # 1. NOVO: ESTRUTURA PARA SUPORTAR ESTADOS 'IDLE' E 'RUN' DO INIMIGO
+    assets['tooth'] = {'idle': [], 'run': []}
+
+    # Carrega IDLE
+    for i in range(1, 8):  # Assumindo frames 1 a 8 para Idle
+        assets['tooth']['idle'].append(load_and_scale_image(f'{tooth_base_path}idle/{i}.png', tooth_size))
+
+    # Carrega RUN (perseguição)
+    for i in range(1, 6):  # Assumindo frames 1 a 5 para Run (ou o que estiver disponível)
+        assets['tooth']['run'].append(load_and_scale_image(f'{tooth_base_path}run/{i}.png', tooth_size))
+
+    # 2. Exemplo: Moeda (Corrigido para 4 frames, range 1 a 5)
     coin_size = (32, 32)
     assets['coin'] = []
     coin_base_path = './asset/items/coin/Gold Coin/'
-    for i in range(1, 4):  # Coin 1 a 4
+    for i in range(1, 5):
         assets['coin'].append(load_and_scale_image(f'{coin_base_path}{i}.png', coin_size))
 
-    # Exemplo: Espeto (Trap)
+    # 3. Exemplo: Espeto (Trap)
     assets['spike_ball'] = load_and_scale_image('./asset/trap/spike_ball/Spiked Ball.png', (TILE_SIZE, TILE_SIZE))
 
     return assets
@@ -141,3 +142,27 @@ def load_audio():
         audio['coin'] = pg.mixer.Sound(pg.sndarray.make_sound([[0]]))
 
     return audio
+
+
+def load_decoration_assets():
+    """Carrega os assets de objetos de decoração (árvores, arbustos, pedras)."""
+    decoration_images = {}
+    for key, path in DECORATION_ASSET_PATHS.items():
+        try:
+            image = pg.image.load(path).convert_alpha()
+            decoration_images[key] = image
+        except pg.error as e:
+            print(f"Erro ao carregar asset de decoração: {path}. Erro: {e}")
+            decoration_images[key] = pg.Surface((64, 64), pg.SRCALPHA)
+
+        # 2. NOVO: Adiciona a animação do HELM no dicionário de decorações
+    helm_size = (64, 64)
+    helm_base_path = './asset//Palm Tree Island/objects/Ship Helm/'
+    decoration_images['helm'] = []  # Use a chave 'helm' para a lista de frames
+
+    for i in range(1, 6):  # Carrega helm 1 a 5
+        path = f'{helm_base_path}{i}.png'
+        decoration_images['helm'].append(load_and_scale_image(path, helm_size))
+
+    return decoration_images
+
