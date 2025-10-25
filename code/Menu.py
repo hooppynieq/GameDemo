@@ -18,13 +18,13 @@ class Menu:
         # Textos Principais
         self.title_text = self.main_font.render(TITLE, True,
                                                 BLACK)  # Trocando para BLACK para melhor contraste no fundo WHITE
-        self.start_text = self.main_font.render("Pressione ESPAÇO para Começar", True, BLACK)
-        self.quit_text = self.main_font.render("Pressione ESC para Sair", True, BLACK)
+        self.start_text = self.main_font.render('Pressione ESPAÇO para Começar', True, BLACK)
+        self.quit_text = self.main_font.render('Pressione ESC para Sair', True, BLACK)
 
         # NOVO: Textos de Controle
         self.controls_title_text = self.small_font.render("--- CONTROLES ---", True, BLACK)
-        self.controls_move = self.small_font.render("Movimento: A (Esquerda) / D (Direita)", True, BLACK)
-        self.controls_jump = self.small_font.render("Pular: ESPAÇO", True, BLACK)
+        self.controls_move = self.small_font.render('Movimento: A (Esquerda) / D (Direita)', True, BLACK)
+        self.controls_jump = self.small_font.render('Pular: ESPAÇO - Atacar: Z', True, BLACK)
 
         self.clock = pg.time.Clock()
 

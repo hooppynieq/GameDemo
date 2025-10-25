@@ -18,32 +18,62 @@ def load_and_scale_image(path, size, flip=False):
 
 
 def load_player_assets():
-    """Carrega e organiza todos os assets do jogador (idle e run, direita e esquerda)."""
-    base_path = './asset/Captain Clown Nose/Captain Clown Nose/without Sword/'
+    """Carrega e organiza todos os assets do jogador (idle, run, attack, hit, death)."""
+    base_path = './asset/Captain Clown Nose/Captain Clown Nose/with Sword/'
     player_size = (128, 80)
 
     animations = {
         'idle_right': [],
         'idle_left': [],
         'run_right': [],
-        'run_left': []
+        'run_left': [],
+        'attack_right': [],  # NOVO: Ataque
+        'attack_left': [],  # NOVO: Ataque
+        'hit_right': [],  # NOVO: Recebendo Dano
+        'hit_left': [],  # NOVO: Recebendo Dano
+        'death_right': [],  # NOVO: Morte
+        'death_left': []  # NOVO: Morte
     }
 
-    # IDLE
-    for i in range(1, 6):  # Idle 01 a Idle 05
+    # IDLE (De 01 a 04)
+    for i in range(1, 5):
         path = f'{base_path}Idle/Idle {i:02d}.png'
         img_right = load_and_scale_image(path, player_size)
         img_left = load_and_scale_image(path, player_size, flip=True)
         animations['idle_right'].append(img_right)
         animations['idle_left'].append(img_left)
 
-    # RUN
-    for i in range(1, 7):  # Run 01 a Run 06
+    # RUN (De 01 a 05)
+    for i in range(1, 6):
         path = f'{base_path}Run/Run {i:02d}.png'
         img_right = load_and_scale_image(path, player_size)
         img_left = load_and_scale_image(path, player_size, flip=True)
         animations['run_right'].append(img_right)
         animations['run_left'].append(img_left)
+
+    # NOVO: ATTACK (Ajuste o range conforme o número de frames do seu asset)
+    for i in range(1, 3):  # Exemplo: 4 frames
+        path = f'{base_path}Attack 2/Attack 2 {i:02d}.png'
+        img_right = load_and_scale_image(path, player_size)
+        img_left = load_and_scale_image(path, player_size, flip=True)
+        animations['attack_right'].append(img_right)
+        animations['attack_left'].append(img_left)
+
+    # NOVO: HIT (Recebendo Dano)
+    for i in range(1, 4):  # Exemplo: 2 frames
+        path = f'{base_path}Hit Sword/Hit Sword {i:02d}.png'
+        img_right = load_and_scale_image(path, player_size)
+        img_left = load_and_scale_image(path, player_size, flip=True)
+        animations['hit_right'].append(img_right)
+        animations['hit_left'].append(img_left)
+
+    # NOVO: DEATH (Morte)
+    for i in range(1, 4):  # Exemplo: 5 frames
+        path = f'{base_path}Dead Ground/Dead Ground {i:02d}.png'
+        img_right = load_and_scale_image(path, player_size)
+        img_left = load_and_scale_image(path, player_size, flip=True)
+        animations['death_right'].append(img_right)
+        animations['death_left'].append(img_left)
 
     return animations
 
@@ -98,18 +128,30 @@ def load_entity_assets(assets=None):
     tooth_size = (64, 64)
     tooth_base_path = './asset/enemies/Fierce Tooth/'
 
-    # 1. NOVO: ESTRUTURA PARA SUPORTAR ESTADOS 'IDLE' E 'RUN' DO INIMIGO
-    assets['tooth'] = {'idle': [], 'run': []}
+    # 1. ATUALIZADO: ESTRUTURA PARA SUPORTAR TODOS OS ESTADOS DE COMBATE DO INIMIGO
+    assets['tooth'] = {'idle': [], 'run': [], 'hit': [], 'death': [], 'attack': []}
 
     # Carrega IDLE
     for i in range(1, 8):  # Assumindo frames 1 a 8 para Idle
-        assets['tooth']['idle'].append(load_and_scale_image(f'{tooth_base_path}idle/{i}.png', tooth_size))
-
+        assets['tooth']['idle'].append(load_and_scale_image(f'{tooth_base_path}Idle/Idle {i:02d}.png', tooth_size))
+    # path = f'{base_path}Idle/Idle {i:02d}.png'
     # Carrega RUN (perseguição)
     for i in range(1, 6):  # Assumindo frames 1 a 5 para Run (ou o que estiver disponível)
-        assets['tooth']['run'].append(load_and_scale_image(f'{tooth_base_path}run/{i}.png', tooth_size))
+        assets['tooth']['run'].append(load_and_scale_image(f'{tooth_base_path}Run/Run {i:02d}.png', tooth_size))
 
-    # 2. Exemplo: Moeda (Corrigido para 4 frames, range 1 a 5)
+        # NOVO: Attack
+    for i in range(1, 5):  # Exemplo: 5 frames
+        assets['tooth']['attack'].append(load_and_scale_image(f'{tooth_base_path}Attack/Attack {i:02d}.png', tooth_size))
+
+        # NOVO: HIT (Recebendo Dano)
+    for i in range(1, 4):  # Exemplo: 2 frames
+        assets['tooth']['hit'].append(load_and_scale_image(f'{tooth_base_path}Hit/Hit {i:02d}.png', tooth_size))
+
+        # NOVO: DEATH (Morte)
+    for i in range(1, 4):  # Exemplo: 5 frames
+        assets['tooth']['death'].append(load_and_scale_image(f'{tooth_base_path}Dead Hit/Dead Hit {i:02d}.png', tooth_size))
+
+    # 2. Exemplo: Moeda
     coin_size = (32, 32)
     assets['coin'] = []
     coin_base_path = './asset/items/coin/Gold Coin/'
@@ -130,6 +172,7 @@ def load_audio():
         audio['bg'] = AUDIO_PATHS['bg']
         audio['jump'] = pg.mixer.Sound(AUDIO_PATHS['jump'])
         audio['coin'] = pg.mixer.Sound(AUDIO_PATHS['coin'])
+        # NOVO: Adicione sons de ataque, hit e morte aqui se tiver!
 
         # Define o volume para SFX (opcional)
         audio['jump'].set_volume(0.5)
@@ -155,7 +198,7 @@ def load_decoration_assets():
             print(f"Erro ao carregar asset de decoração: {path}. Erro: {e}")
             decoration_images[key] = pg.Surface((64, 64), pg.SRCALPHA)
 
-        # 2. NOVO: Adiciona a animação do HELM no dicionário de decorações
+    # 2. NOVO: Adiciona a animação do HELM no dicionário de decorações
     helm_size = (64, 64)
     helm_base_path = './asset//Palm Tree Island/objects/Ship Helm/'
     decoration_images['helm'] = []  # Use a chave 'helm' para a lista de frames
@@ -165,4 +208,3 @@ def load_decoration_assets():
         decoration_images['helm'].append(load_and_scale_image(path, helm_size))
 
     return decoration_images
-
