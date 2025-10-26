@@ -205,10 +205,18 @@ class Enemy(pg.sprite.Sprite):
                 new_state = 'attack'
                 self.is_attacking = True
                 self.attack_cooldown = self.attack_delay
+                pass
             else:
                 new_state = 'run'
+                # CORREÇÃO AQUI: Inverte a lógica de direção.
+                # Se dx > 0 (Player à direita), o inimigo deve ir para a direita (1).
+                # No seu caso, se o inimigo está de costas, a direção 1 ou -1 está ligada ao flip errado.
+
+                # Vamos tentar INVERTER a direção:
                 self.direction = 1 if dx > 0 else -1
 
+                # Se ainda estiver de costas, INVERTA NOVAMENTE:
+                # self.direction = 1 if dx < 0 else -1 # (Alternativa)
         else:
             new_state = 'idle'
 
@@ -305,7 +313,7 @@ class Enemy(pg.sprite.Sprite):
         # 4. Define a imagem e aplica o flip
         img = animation_set[self.current_frame]
 
-        if self.direction == -1:
+        if self.direction == 1:
             self.image = pg.transform.flip(img, True, False)
         else:
             self.image = img
