@@ -1,5 +1,4 @@
-# Enemy.py
-
+#Enemy.py
 import pygame as pg
 from code.Const import (
     ENEMY_SPEED, GRAVITY, TILE_SIZE, ENEMY_ANIMATION_SPEED, AGGRO_RANGE,
@@ -14,19 +13,21 @@ class Enemy(pg.sprite.Sprite):
         self.game_map = game_map
         self.type = enemy_type
 
+        # Variável para ignorar colisões de tiles não-sólidos (Decorações e Itens)
         self._non_solid_chars = set(DECORATION_MAP_CODES.keys()).union(set(ITEM_MAP_CODES.keys()))
 
+        # Animação e estados
         self.animations = assets[enemy_type]
         self.state = 'idle'
         self.current_frame = 0
         self.animation_timer = 0
 
         # --- Variáveis de Combate e Estado de Vida ---
-        self.health = 50
+        self.health = 25
         self.is_dead = False
         self.is_hit = False
         self.is_attacking = False
-        self.kill_flag = False
+        self.kill_flag = False  # Sinaliza que a animação de morte terminou e deve ser removido.
 
         # --- Configurações de Combate ---
         self.attack_range = TILE_SIZE * 1.5
@@ -44,19 +45,34 @@ class Enemy(pg.sprite.Sprite):
         self.image = self.animations[self.state][0]
         self.rect = self.image.get_rect(topleft=self.pos)
 
-        # 1. Calcular o Y do chão (bottom do tile)
-        tile_bottom_y = start_pos[1] + TILE_SIZE
+        # Collider: REDEFINIÇÃO DO HITBOX PARA EVITAR COLISÃO FANTASMA
+        # Criamos um novo Rect que representa apenas o corpo do inimigo.
+        # Exemplo: Reduzir a altura em 25% (0.75) e centralizar no X.
 
-        # Collider
-        self.collider = self.rect
+        # Estas proporções (0.8 e 0.9) são estimativas. Ajuste com base no tamanho real do seu sprite.
+        COLLIDER_WIDTH_FACTOR = 0.8
+        COLLIDER_HEIGHT_FACTOR = 0.9
+
+        collider_width = int(self.rect.width * COLLIDER_WIDTH_FACTOR)
+        collider_height = int(self.rect.height * COLLIDER_HEIGHT_FACTOR)
+
+        # Criamos o novo collider, alinhando sua base (bottom) com a base do rect da imagem.
+        self.collider = pg.Rect(
+            self.pos[0] + (self.rect.width - collider_width) / 2,  # Centraliza no X
+            self.pos[1] + (self.rect.height - collider_height),  # Alinha a base
+            collider_width,
+            collider_height
+        )
+
         self.on_ground = False
 
+        # Correção no ajuste inicial de posição: Use o collider.top
         self.pos[1] -= 1
         self.rect.top = self.pos[1]
-        self.collider.top = self.pos[1]
+        self.collider.top = self.pos[1]  # <--- O collider é o que define o Y para a física
 
     # ----------------------------------------------------------------------
-    # MÉTODOS DE FÍSICA E COLISÃO (Inalterados)
+    # MÉTODOS DE FÍSICA E COLISÃO (MANTIDOS)
     # ----------------------------------------------------------------------
 
     def _apply_gravity(self):
@@ -134,26 +150,35 @@ class Enemy(pg.sprite.Sprite):
         return False
 
     # ----------------------------------------------------------------------
-    # MÉTODOS DE COMBATE E LÓGICA
+    # MÉTODOS DE COMBATE E LÓGICA (MODIFICADO receive_damage)
     # ----------------------------------------------------------------------
 
     def receive_damage(self, amount):
+        """
+        Processa o recebimento de dano.
+        Retorna True se o inimigo for morto AGORA.
+        """
         if not self.is_dead and not self.is_hit:
             self.health -= amount
             self.health = max(0, self.health)
 
-            print(f"Inimigo '{self.type}' recebeu {amount} de dano! Vida atual: {self.health}")
+            is_newly_dead = False  # NOVO: Flag para sinalizar a morte
 
             if self.health <= 0:
                 self.is_dead = True
-                self.state = 'death'  # Estado de morte
-                self.is_attacking =False # Zera o ataque imediatamente!
+                self.state = 'death'
+                self.is_attacking = False  # Garante que o ataque pare
+                is_newly_dead = True  # Sinaliza a morte
             else:
                 self.is_hit = True
                 self.state = 'hit'
 
             self.current_frame = 0
             self.animation_timer = 0
+
+            return is_newly_dead  # RETORNA TRUE se o inimigo foi morto
+
+        return False  # Retorna False se o dano foi ignorado ou se o inimigo já estava morto/atingido
 
     def can_deal_damage(self):
         if self.is_dead:
@@ -175,7 +200,6 @@ class Enemy(pg.sprite.Sprite):
         new_state = self.state
 
         if distance < self.aggro_range:
-            self.direction = 1 if dx > 0 else -1
 
             if distance < self.attack_range and self.attack_cooldown <= 0:
                 new_state = 'attack'
@@ -183,6 +207,8 @@ class Enemy(pg.sprite.Sprite):
                 self.attack_cooldown = self.attack_delay
             else:
                 new_state = 'run'
+                self.direction = 1 if dx > 0 else -1
+
         else:
             new_state = 'idle'
 
@@ -249,13 +275,11 @@ class Enemy(pg.sprite.Sprite):
         num_frames = len(animation_set)
 
         # 2. Atualização do Frame
-        # Garante que ele não tente incrementar se já estiver no último frame de morte
-        if not (self.is_dead and self.current_frame == num_frames - 1):
-            self.animation_timer += 1
+        self.animation_timer += 1
 
-            if self.animation_timer >= ENEMY_ANIMATION_SPEED:
-                self.current_frame += 1
-                self.animation_timer = 0
+        if self.animation_timer >= ENEMY_ANIMATION_SPEED:
+            self.current_frame += 1
+            self.animation_timer = 0
 
         # 3. Lógica de Fim de Animação
         if self.current_frame >= num_frames:
@@ -270,27 +294,16 @@ class Enemy(pg.sprite.Sprite):
                     self.is_attacking = False
                     self.state = 'idle'
                     self.current_frame = 0
-
-                # CORREÇÃO CRÍTICA: Trava no último frame e sinaliza para remoção.
-                if self.is_dead:
+                elif self.is_dead:
+                    # Trava no último frame e sinaliza para remoção.
                     self.current_frame = num_frames - 1
                     self.kill_flag = True
-                    # O return é crucial para evitar que ele tente acessar a próxima imagem
-                    # se o frame já foi travado.
-                    # Não vamos usar o return aqui, mas sim o if no início para travar.
+                    return  # Sai para evitar redefinição de imagem
                 else:
                     self.current_frame = 0
 
         # 4. Define a imagem e aplica o flip
-        # Se a animação de morte foi travada, garantimos que o frame correto seja usado
-        frame_index = self.current_frame
-        if self.is_dead and frame_index >= num_frames:
-            frame_index = num_frames - 1
-
-        # Garante que frame_index não exceda o num_frames (mesmo que a lógica acima já resolva)
-        frame_index = min(frame_index, num_frames - 1)
-
-        img = animation_set[frame_index]
+        img = animation_set[self.current_frame]
 
         if self.direction == -1:
             self.image = pg.transform.flip(img, True, False)
@@ -310,22 +323,25 @@ class Enemy(pg.sprite.Sprite):
         if self.attack_cooldown > 0:
             self.attack_cooldown -= 1
 
-        # 2. FÍSICA E COLISÃO VERTICAL (APLICADO SEMPRE)
-        self._apply_gravity()
-        self._check_collision_y()
-
-        # 3. Lógica de estado e movimento (SÓ SE ESTIVER VIVO)
+        # 2. Lógica de estado e movimento
         if not self.is_dead:
-
-            # Verifica o estado (run/attack/idle) E DEFINE self.direction
             if not self.is_hit and not self.is_attacking:
                 self._check_aggro(player_pos)
+
+            # Aplica a física (gravidade e colisão)
+            self._apply_gravity()
+            self._check_collision_y()
 
             if self.state == 'run':
                 self._move_and_check_collision_x()
 
-        # 4. Animação
+        else:
+            # Mesmo morto, aplica a gravidade para ele cair no chão se estiver no ar
+            self._apply_gravity()
+            self._check_collision_y()
+
+        # 3. Animação
         self._animate()
 
-        # 5. Atualiza a posição de desenho
+        # 4. Atualiza a posição de desenho
         self.rect.topleft = (self.pos[0] + offset_x, self.pos[1])
