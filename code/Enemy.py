@@ -1,9 +1,7 @@
-# Enemy.py
-
 import pygame as pg
 from code.Const import (
     ENEMY_SPEED, GRAVITY, TILE_SIZE, ENEMY_ANIMATION_SPEED, AGGRO_RANGE,
-    DECORATION_MAP_CODES, ITEM_MAP_CODES, FPS
+    DECORATION_MAP_CODES, ENEMY_COLLIDER_SIZE, ITEM_MAP_CODES
 )
 
 
@@ -14,7 +12,7 @@ class Enemy(pg.sprite.Sprite):
         self.game_map = game_map
         self.type = enemy_type
 
-        # Variável para ignorar colisões de tiles não-sólidos (Decorações e Itens)
+        # Caracteres que não são sólidos no mapa (Decorações e Itens)
         self._non_solid_chars = set(DECORATION_MAP_CODES.keys()).union(set(ITEM_MAP_CODES.keys()))
 
         # Animação e estados
@@ -23,22 +21,22 @@ class Enemy(pg.sprite.Sprite):
         self.current_frame = 0
         self.animation_timer = 0
 
-        # --- Variáveis de Combate e Estado de Vida ---
+        # Variáveis de Combate e Estado de Vida
         self.health = 25
         self.is_dead = False
         self.is_hit = False
         self.is_attacking = False
         self.kill_flag = False
 
-        # --- Configurações de Combate (ESPECÍFICO PARA SEASHELL) ---
+        # Configurações Específicas (Seashell vs. Tooth)
         self.is_fixed = (self.type == 'seashell')
         self.can_move = not self.is_fixed
 
         if self.type == 'seashell':
-            self.attack_range = TILE_SIZE * 1.0  # Ataque mais próximo
-            self.attack_delay = 120  # Cooldown maior para o próximo ataque
-            self.aggro_range = TILE_SIZE * 3  # Raio de aggro de 3 blocos
-            self.health = 50  # Ostras podem ser mais resistentes
+            self.attack_range = TILE_SIZE * 1.0
+            self.attack_delay = 120
+            self.aggro_range = TILE_SIZE * 3
+            self.health = 50
         else:
             self.attack_range = TILE_SIZE * 1.5
             self.attack_delay = 60
@@ -50,21 +48,17 @@ class Enemy(pg.sprite.Sprite):
         self.pos = list(start_pos)
         self.vertical_speed = 0
         self.speed = ENEMY_SPEED
-
-        # --- Direção (Seashell fixo, outros móveis) ---
-        if self.type == 'seashell':
-            # Direção fixa que você deseja (ex: -1 para esquerda, 1 para direita)
-            self.direction = -1
-        else:
-            self.direction = 1  # 1: direita, -1: esquerda (para inimigos móveis)
-
+        # Direção inicial (Seashell fixo, outros móveis)
+        self.direction = 1 if self.type != 'seashell' else -1
         self.aggro_range = AGGRO_RANGE
 
         # Imagem e Rect
         self.image = self.animations[self.state][0]
         self.rect = self.image.get_rect(topleft=self.pos)
 
-        # Collider: REDEFINIÇÃO DO HITBOX
+        # DEFINIÇÃO DE COLLIDER E POSICIONAMENTO INICIAL NO CHÃO
+
+        # 1. Configurações de Collider (usando fatores de escala)
         COLLIDER_WIDTH_FACTOR = 0.8
         COLLIDER_HEIGHT_FACTOR = 0.9
 
@@ -80,50 +74,38 @@ class Enemy(pg.sprite.Sprite):
 
         self.on_ground = False
 
-        # --- CORREÇÃO DE POSIÇÃO INICIAL: AJUSTA A BASE DO COLLIDER AO CHÃO DO TILE ---
-        # O start_pos[1] é o topo do tile. A base do tile é start_pos[1] + TILE_SIZE.
+        # 2. Ajusta a base do collider ao chão do tile (ancoragem vertical)
         target_bottom = start_pos[1] + TILE_SIZE
-
-        # Move o collider para que sua base fique no chão do tile.
         self.collider.bottom = target_bottom
 
-        # Atualiza self.pos[1] (o topo) e o rect a partir do collider.
+        # 3. Atualiza a posição 'top' do sprite com base no collider
         self.pos[1] = self.collider.top
         self.rect.top = self.pos[1]
 
         self.on_ground = False
 
-        # --- CORREÇÃO DE POSIÇÃO INICIAL PARA EVITAR FLUTUAÇÃO DE 1 PIXEL ---
-        # 1. Calcule a coordenada Y exata do chão do tile.
+        # 4. Reajuste final de 1 pixel e estado inicial para inimigos fixos
         target_bottom = start_pos[1] + TILE_SIZE
-
-        # 2. Force o collider.bottom a essa posição.
         self.collider.bottom = target_bottom
-
-        # 3. Atualize self.pos[1] (o topo) e o rect a partir do collider.
         self.pos[1] = self.collider.top
         self.rect.top = self.pos[1]
 
-        # 4. Ajuste manual de 1 pixel: se ele flutua, vamos forçar a descida inicial.
-        # Se for um inimigo fixo, vamos garantir que ele já comece 'on_ground'.
         if self.is_fixed:
             self.on_ground = True
-
-            # Se ainda flutuar, este ajuste deve corrigir a imprecisão
-            # que pode vir do collider/rect ou da sua arte.
-            # Move o collider e a posição 1 pixel para baixo para fixar no chão.
+            # Ajuste de 1 pixel para fixar no chão
             self.pos[1] += 1
             self.collider.top = self.pos[1]
             self.rect.top = self.pos[1]
 
-            # ATENÇÃO: Se isso fizer ele AFUNDAR, remova o bloco 'if self.is_fixed:' acima.
+    def draw_debug(self, screen, offset_x):
+        """Desenha o collider do Enemy na tela para depuração (VERMELHO)."""
+        debug_rect = self.collider.copy()
+        debug_rect.x += offset_x
+        pg.draw.rect(screen, (255, 0, 0), debug_rect, 2)
 
-    # ----------------------------------------------------------------------
     # MÉTODOS DE FÍSICA E COLISÃO
-    # ----------------------------------------------------------------------
-
     def _apply_gravity(self):
-        # Inimigos fixos só precisam da gravidade para cair no chão no spawn
+        # Inimigos fixos param a gravidade quando tocam o chão
         if self.is_fixed and self.on_ground and self.vertical_speed >= 0:
             self.vertical_speed = 0
             return
@@ -133,6 +115,10 @@ class Enemy(pg.sprite.Sprite):
         self.pos[1] += self.vertical_speed
         self.collider.top = self.pos[1]
         self.rect.top = self.pos[1]
+
+    def get_top_surface(self):
+        """Retorna a coordenada Y do topo da superfície de colisão do inimigo."""
+        return self.collider.top
 
     def _check_collision_y(self):
         map_height = len(self.game_map)
@@ -178,7 +164,6 @@ class Enemy(pg.sprite.Sprite):
         return collided_this_frame
 
     def _check_collision_x(self):
-        # Inimigos fixos não verificam colisão no eixo X.
         if self.is_fixed:
             return False
 
@@ -201,14 +186,12 @@ class Enemy(pg.sprite.Sprite):
                     tile_rect = pg.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
                     if self.collider.colliderect(tile_rect):
-                        # A colisão inverte a direção (Lógica do Tooth)
+                        # Colisão com parede inverte a direção
                         self.direction *= -1
                         return True
         return False
 
-    # ----------------------------------------------------------------------
     # MÉTODOS DE COMBATE E LÓGICA
-    # ----------------------------------------------------------------------
 
     def receive_damage(self, amount):
         if not self.is_dead and not self.is_hit:
@@ -239,7 +222,7 @@ class Enemy(pg.sprite.Sprite):
         if not attack_frames:
             return False
 
-        # Assume que os frames 1, 2 e 3 são os frames ativos de hit.
+        # Define os frames ativos de hit
         hit_frames = {1, 2, 3}
         return self.is_attacking and int(self.current_frame) in hit_frames
 
@@ -252,36 +235,26 @@ class Enemy(pg.sprite.Sprite):
         new_state = self.state
 
         if distance < self.aggro_range:
+            # Lógica de Ataque
+            if distance < self.attack_range and self.attack_cooldown <= 0:
+                new_state = 'attack'
+                self.is_attacking = True
+                self.attack_cooldown = self.attack_delay
 
-            # LÓGICA SEASHELL (Fixo: Idle -> Attack)
-            if self.is_fixed:
-
-                # CRUCIAL: Seashell NUNCA muda de direção.
-                if distance < self.attack_range and self.attack_cooldown <= 0:
-                    new_state = 'attack'
-                    self.is_attacking = True
-                    self.attack_cooldown = self.attack_delay
-
+            # Lógica de Movimento/Perseguição
+            else:
+                if not self.is_fixed:
+                    new_state = 'run'
+                    # Persegue o jogador
+                    self.direction = 1 if dx > 0 else -1
                 else:
                     new_state = 'idle'
-                    # Se estiver em idle, mantém a direção inicial definida no __init__
-
-            # LÓGICA INIMIGOS MÓVEIS (Idle/Run -> Attack)
-            else:
-                if distance < self.attack_range and self.attack_cooldown <= 0:
-                    new_state = 'attack'
-                    self.is_attacking = True
-                    self.attack_cooldown = self.attack_delay
-                else:
-                    new_state = 'run'
-                    # Tooth persegue e muda de direção
-                    self.direction = 1 if dx > 0 else -1
 
         # Inimigo fora do aggro
         else:
             if not self.is_fixed:
                 new_state = 'idle'
-            # Seashell (is_fixed) já está em 'idle' por padrão
+            # Inimigos fixos mantêm 'idle'
 
         if new_state != self.state:
             self.current_frame = 0
@@ -289,15 +262,13 @@ class Enemy(pg.sprite.Sprite):
             self.state = new_state
 
     def _move_and_check_collision_x(self):
-        # Inimigos fixos não se movem
-        if self.is_fixed:
-            return
-
-        if self.is_dead or self.is_hit or self.is_attacking:
+        # Inimigos fixos e em estado de combate não se movem
+        if self.is_fixed or self.is_dead or self.is_hit or self.is_attacking:
             return
 
         future_x = self.pos[0] + self.speed * self.direction
 
+        # Verifica se há chão ou parede na frente
         step_col = (future_x + self.direction * self.collider.width // 2) // TILE_SIZE
         foot_row = (self.collider.bottom + 1) // TILE_SIZE
 
@@ -305,10 +276,8 @@ class Enemy(pg.sprite.Sprite):
         map_height = len(self.game_map)
 
         is_at_edge = step_col < 0 or step_col >= map_width
-        is_above_map_bottom = foot_row >= map_height
-
         tile_below = ' '
-        if not is_at_edge and not is_above_map_bottom and foot_row < map_height:
+        if not is_at_edge and foot_row < map_height:
             tile_below = self.game_map[foot_row][step_col]
 
         # Lógica de Virar ao Chegar na Borda do Chão
@@ -327,9 +296,9 @@ class Enemy(pg.sprite.Sprite):
             self.rect.left = self.pos[0]
 
     def _animate(self):
-        """Atualiza o frame da animação do inimigo e aplica o flip."""
+        """Atualiza o frame da animação e aplica o flip."""
 
-        # 1. Prioridade e Seleção do Estado
+        # 1. Prioridade do Estado
         if self.is_dead:
             current_state = 'death'
             loop = False
@@ -353,11 +322,10 @@ class Enemy(pg.sprite.Sprite):
 
         # 2. Lógica de Animação
         if self.is_fixed and current_state == 'idle':
-            # Seashell em IDLE: trava no frame 0
+            # Seashell em IDLE trava no frame 0
             self.current_frame = 0
             self.animation_timer = 0
         else:
-            # Lógica normal de animação (incluindo Seashell Attack, Hit e Death)
             self.animation_timer += 1
             if self.animation_timer >= ENEMY_ANIMATION_SPEED:
                 self.current_frame += 1
@@ -393,23 +361,19 @@ class Enemy(pg.sprite.Sprite):
 
         self.state = current_state
 
-    # ----------------------------------------------------------------------
     # LOOP PRINCIPAL
-    # ----------------------------------------------------------------------
 
     def update(self, offset_x, player_pos):
         """Atualiza o inimigo."""
 
-        # 1. Gerencia o Cooldown do ataque
         if self.attack_cooldown > 0:
             self.attack_cooldown -= 1
 
-        # 2. Lógica de estado e movimento
         if not self.is_dead:
             if not self.is_hit and not self.is_attacking:
                 self._check_aggro(player_pos)
 
-            # Aplica a física (gravidade e colisão)
+            # Aplica a física
             self._apply_gravity()
             self._check_collision_y()
 
@@ -417,12 +381,11 @@ class Enemy(pg.sprite.Sprite):
                 self._move_and_check_collision_x()
 
         else:
-            # Mesmo morto, aplica a gravidade (para cair fora do mapa se necessário)
+            # Gravidade mesmo morto para cair fora do mapa
             self._apply_gravity()
             self._check_collision_y()
 
-        # 3. Animação
         self._animate()
 
-        # 4. Atualiza a posição de desenho
+        # Atualiza a posição de desenho
         self.rect.topleft = (self.pos[0] + offset_x, self.pos[1])

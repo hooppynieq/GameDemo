@@ -1,12 +1,9 @@
-# player.py
-
 import pygame as pg
 
 from code.Const import (
     PLAYER_COLLIDER_SIZE, GRAVITY, TILE_SIZE, PLAYER_JUMP_FORCE, PLAYER_SPEED,
     PLAYER_ANIMATION_SPEED, DECORATION_MAP_CODES, ITEM_MAP_CODES
 )
-# Assumindo que você tem uma função load_player_assets em code.utils
 from code.utils import load_player_assets
 
 
@@ -14,55 +11,58 @@ class Player(pg.sprite.Sprite):
     def __init__(self, start_pos, game_map, map_width_pixels):
         super().__init__()
 
-        # Variável para ignorar colisões de tiles não-sólidos (Decorações e Itens)
+        # Ignora colisões com tiles não-sólidos (Decorações e Itens)
         self._non_solid_chars = set(DECORATION_MAP_CODES.keys()).union(set(ITEM_MAP_CODES.keys()))
 
-        # Mapa para Colisão
         self.game_map = game_map
-
-        # Assets
         self.animations = load_player_assets()
 
-        # --- Variáveis de Combate e Estado de Vida ---
+        # ESTADO DE COMBATE E VIDA
         self.health = 100
-        self.is_dead = False # CRÍTICO: Estado de Morte
+        self.is_dead = False
         self.is_hit = False
         self.is_attacking = False
         self.current_direction = 'right'
 
-        # Estado de Movimento e Animação
         self.state = 'idle_right'
         self.current_frame = 0
         self.animation_timer = 0
 
         # Posição e Físicas
-        self.pos = list(start_pos)  # [x, y]
+        self.pos = list(start_pos)
         self.vertical_speed = 0
         self.on_ground = False
 
-        # Imagem e Retângulo
         self.image = self.animations['idle_right'][0]
         self.rect = self.image.get_rect(topleft=self.pos)
 
-        # Collider
+        # Collider (Retângulo de colisão real)
         self.collider_offset_x = 40
         self.collider_offset_y = 8
         self.collider = pg.Rect(self.pos[0] + self.collider_offset_x, self.pos[1] + self.collider_offset_y,
                                 PLAYER_COLLIDER_SIZE[0], PLAYER_COLLIDER_SIZE[1])
 
-        # Limite do mundo
+        # Limites do mundo
         self.map_width_pixels = map_width_pixels
         self.min_x = 0
         self.max_x = map_width_pixels - PLAYER_COLLIDER_SIZE[0] - self.collider_offset_x
 
+    def draw_debug(self, screen, offset_x):
+        """Desenha o collider do Player na tela para depuração (AZUL)."""
+        debug_rect = self.collider.copy()
+        debug_rect.x += offset_x
+        pg.draw.rect(screen, (0, 0, 255), debug_rect, 2)
+        if self.on_ground:
+            pg.draw.rect(screen, (0, 255, 0), self.collider, 2)
+
     def _apply_gravity(self):
-        """Aplica a gravidade e a velocidade vertical."""
+        """Aplica a gravidade e limita a velocidade vertical."""
         self.vertical_speed += GRAVITY
         self.vertical_speed = min(self.vertical_speed, 15)
         self.pos[1] += self.vertical_speed
         self.collider.top = self.pos[1] + self.collider_offset_y
 
-    # --- MÉTODOS DE COMBATE E DANO ---
+    # MÉTODOS DE COMBATE E DANO
 
     def attack(self):
         """Inicia a animação de ataque."""
@@ -73,7 +73,7 @@ class Player(pg.sprite.Sprite):
             self.state = 'attack_' + self.current_direction
 
     def receive_damage(self, amount):
-        """Processa o recebimento de dano (Atualizado para morte)."""
+        """Processa o recebimento de dano e transiciona para HIT ou DEATH."""
         if self.is_dead or self.is_hit:
             return
 
@@ -82,7 +82,6 @@ class Player(pg.sprite.Sprite):
 
         if self.health <= 0:
             self.is_dead = True
-            # Define o estado de morte para a animação
             self.state = 'death_' + self.current_direction
         else:
             self.is_hit = True
@@ -91,10 +90,10 @@ class Player(pg.sprite.Sprite):
         self.current_frame = 0
         self.animation_timer = 0
 
-    # --- LÓGICA DE COLISÃO ---
+    # LÓGICA DE COLISÃO
 
     def _check_collision_y(self):
-        """Verifica e resolve colisões verticais com o mapa."""
+        """Verifica e resolve colisões verticais com tiles sólidos do mapa."""
         collided = False
 
         if not self.game_map or not self.game_map[0]:
@@ -122,11 +121,11 @@ class Player(pg.sprite.Sprite):
                     if self.collider.colliderect(tile_rect):
                         collided = True
 
-                        if self.vertical_speed > 0:  # Caindo
+                        if self.vertical_speed > 0:
                             self.collider.bottom = tile_rect.top
                             self.on_ground = True
                             self.vertical_speed = 0
-                        elif self.vertical_speed < 0:  # Subindo
+                        elif self.vertical_speed < 0:
                             self.collider.top = tile_rect.bottom
                             self.vertical_speed = 0
 
@@ -138,7 +137,7 @@ class Player(pg.sprite.Sprite):
         return collided
 
     def _check_collision_x(self, move_dir):
-        """Verifica e resolve colisões horizontais com o mapa."""
+        """Verifica e resolve colisões horizontais com tiles sólidos do mapa."""
 
         if not self.game_map or not self.game_map[0]:
             return False
@@ -172,9 +171,26 @@ class Player(pg.sprite.Sprite):
                         return True
         return False
 
+    def check_enemy_surface_collision(self, enemies):
+        """Verifica e resolve a colisão de 'stomp' (pouso no topo do inimigo)."""
+        for enemy in enemies:
+            if self.collider.colliderect(enemy.collider):
+                # Se o Player está caindo ou parado e seu fundo está acima do topo do inimigo
+                if self.vertical_speed >= 0:
+                    if self.collider.bottom <= enemy.collider.top + 5:
+                        new_y_bottom = enemy.get_top_surface()
+                        self.collider.bottom = new_y_bottom
+
+                        self.vertical_speed = 0
+                        self.on_ground = True
+
+                        self.pos[1] = self.collider.top - self.collider_offset_y
+                        self.rect.top = self.pos[1]
+                        return True
+        return False
+
     def jump(self):
         """Faz o jogador pular, se estiver no chão."""
-        # Bloqueia o pulo se estiver em estado de ação ou morto
         if self.is_dead or self.is_hit or self.is_attacking:
             return
 
@@ -185,11 +201,9 @@ class Player(pg.sprite.Sprite):
     def move(self, keys_pressed):
         """Atualiza a posição horizontal e o estado de animação."""
 
-        # Bloqueia o movimento se estiver em estado de ação ou morto
         if self.is_dead or self.is_hit or self.is_attacking:
             return
 
-        # 1. Movimento Horizontal e Limites do Mundo
         moved = False
         move_dir = ''
         new_x = self.pos[0]
@@ -206,13 +220,11 @@ class Player(pg.sprite.Sprite):
         new_x = max(self.min_x, new_x)
         new_x = min(self.max_x, new_x)
 
-        # 2. Atualiza Posição e Colisão X
         if self.pos[0] != new_x:
             self.pos[0] = new_x
             self.collider.left = self.pos[0] + self.collider_offset_x
             self._check_collision_x(move_dir)
 
-        # 3. Atualização do Estado de Animação
         current_direction: str = self.current_direction
         new_state = self.state
 
@@ -236,9 +248,8 @@ class Player(pg.sprite.Sprite):
         self.current_direction = current_direction
 
     def _animate(self):
-        """Atualiza o frame da animação do jogador com lógica de estados."""
+        """Atualiza o frame da animação do jogador."""
 
-        # 1. Prioridade e Determinação do Estado Atual
         if self.is_dead:
             current_state = 'death_' + self.current_direction
             loop = False
@@ -259,46 +270,42 @@ class Player(pg.sprite.Sprite):
             self.current_frame = 0
             self.animation_timer = 0
 
-        # 2. Atualização do Frame
         self.animation_timer += 1
 
         if self.animation_timer >= PLAYER_ANIMATION_SPEED:
             self.current_frame += 1
             self.animation_timer = 0
 
-        # 3. Lógica de Fim de Animação
+        # Lógica de fim de animações não-looping (HIT, ATTACK, DEATH).
         if self.current_frame >= num_frames:
             if loop:
                 self.current_frame = 0
             else:
-                # Fim do HIT
                 if self.is_hit:
                     self.is_hit = False
                     self.state = 'idle_' + self.current_direction
-                # Fim do ATTACK
                 elif self.is_attacking:
                     self.is_attacking = False
                     self.state = 'idle_' + self.current_direction
 
-                # Morte: Trava no último frame
                 if self.is_dead:
                     self.current_frame = num_frames - 1
                 else:
                     self.current_frame = 0
 
-        # 4. Define a imagem
         self.image = animation_set[self.current_frame]
         self.state = current_state
 
-    def update(self, offset_x):
+    def update(self, offset_x, enemies):
         """Lógica de atualização do jogador: gravidade, colisão e animação."""
 
-        # 1. Gravidade e Colisão Vertical (SEMPRE aplicado, mesmo que morto)
+        # Aplica Física e Colisão Vertical (Mesmo se morto).
         self._apply_gravity()
         self._check_collision_y()
+        self.check_enemy_surface_collision(enemies)
 
-        # 2. Animação
         self._animate()
 
-        # 3. Atualiza o rect principal para o desenho (APLICA O OFFSET)
-        self.rect.topleft = (self.pos[0] + offset_x, self.pos[1])
+        # Atualiza o rect de desenho (aplica offset da câmera).
+        self.rect.topleft = (self.collider.left + offset_x - self.collider_offset_x,
+                             self.collider.top - self.collider_offset_y)

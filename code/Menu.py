@@ -1,5 +1,3 @@
-# Menu.py
-
 import pygame as pg
 from code.Const import SCREEN_SIZE, TITLE, WHITE, BLACK, FONT_NAME, FONT_SIZE
 
@@ -15,12 +13,12 @@ class Menu:
         self.main_font = pg.font.SysFont(FONT_NAME, FONT_SIZE, bold=True)
         self.small_font = pg.font.SysFont(FONT_NAME, FONT_SIZE // 2, bold=False)
 
-        # --- VARIÁVEIS DE NAVEGAÇÃO DO MENU ---
+        # VARIÁVEIS DE NAVEGAÇÃO DO MENU
         self.menu_options = ["COMEÇAR O JOGO", "SAIR"]
         self.selected_option_index = 0
         self.option_spacing = self.main_font.get_height() + 10
 
-        # --- Textos PRÉ-RENDERIZADOS ---
+        # Textos PRÉ-RENDERIZADOS
         self.title_text = self.main_font.render(TITLE, True, BLACK)
 
         # Textos de Controle
@@ -76,7 +74,7 @@ class Menu:
     def run(self, key_event_key=None):
         """Executa o loop do menu. Lida com a navegação por setas e seleção por ENTER."""
 
-        # --- Lógica de Navegação e Seleção ---
+        # Lógica de Navegação e Seleção
         if key_event_key is not None:
 
             # Navegação para cima
@@ -97,7 +95,7 @@ class Menu:
                 elif selected_text == "SAIR":
                     return 'QUIT'
 
-            # Permite ESC para sair (fallback)
+            # Permite ESC para sair
             elif key_event_key == pg.K_ESCAPE:
                 return 'QUIT'
 
