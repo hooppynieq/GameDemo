@@ -19,7 +19,7 @@ class Game:
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
 
-        self.is_playing = False
+        self.is_playing = False  # Agora controlado pelo Menu
         self.is_running = True
 
         # Assets
@@ -39,22 +39,19 @@ class Game:
         self.death_timer = 0
         self.respawn_delay = 180
 
-        # --- Variáveis de Score e Spawn (NOVOS) ---
-        self.SCORE_TO_WIN = 100  # Meta: matar 5 inimigos para vencer o jogo
-        self.SPAWN_COOLDOWN = 180  # 3 segundos (180 frames) para spawnar
+        # --- Variáveis de Score e Spawn ---
+        self.SCORE_TO_WIN = 100
+        self.SPAWN_COOLDOWN = 180
         self.spawn_timer = 0
-        self.max_enemies_on_screen = 3  # Limite de inimigos simultâneos
-        # Posição de spawn (Ajuste para um local no seu mapa, ex: (x, y))
-        # self.SPAWN_POINT = (1000, 600) # Ponto unico para spawn
+        self.max_enemies_on_screen = 3
+
         self.SPAWN_POINTS = [
-            (1024, 384),  # 16 * 64, 6 * 64 (Em cima da plataforma central)
-            (128, 512),  # 2 * 64, 8 * 64 (Plataforma inferior esquerda)
-            (1088, 576),  # 17 * 64, 9 * 64 (Plataforma intermediária)
-            (1600, 640),  # 25 * 64, 10 * 64 (Chão principal)
-            (2240, 640),  # 35 * 64, 10 * 64 (Chão principal, lado direito)
-            # Adicione mais pontos conforme a necessidade do seu mapa
+            (1024, 384),
+            (128, 512),
+            (1088, 576),
+            (1600, 640),
+            (2240, 640),
         ]
-        # --- Fim Novos ---
 
         # Inicialização VAZIA dos Componentes do Jogo
         self.player = None
@@ -80,8 +77,8 @@ class Game:
             'small_water': 0,
         }
 
-    def setup_level(self):
-        """Inicializa o player e todos os objetos do nível. Chamado na transição de MENU para GAME e no Respawn."""
+    def _start_new_level(self):
+        """CONFIGURA O JOGO DO ZERO: zera score, limpa o mundo e inicializa o player."""
 
         # Reseta o score e timers
         self.score = 0
@@ -95,32 +92,39 @@ class Game:
         self.traps.empty()
         self.decorations.empty()
 
-        # 1. Cria o Player
+        # 1. Cria o Player e reseta o timer de morte
         self.player = Player(start_pos=[300, 600], game_map=GAME_MAP, map_width_pixels=self.map_width_pixels)
         self.death_timer = 0
 
         # 2. Cria os objetos do nível (APENAS ITENS, TRAPS E DECORAÇÕES)
         self._create_level_objects()
 
-        # 3. Define o estado como ativo
+        # 3. Define o estado de jogo como ativo
         self.is_playing = True
 
-    # --- NOVO MeTODO DE SPAWN ---
+    def _player_respawn(self):
+        """Reinicia APENAS o Player e variáveis de câmera/morte, MANTENDO o score e o mundo."""
+
+        # 1. Cria o Player na posição inicial
+        self.player = Player(start_pos=[300, 600], game_map=GAME_MAP, map_width_pixels=self.map_width_pixels)
+
+        # 2. Reseta variáveis de controle
+        self.death_timer = 0
+        self.camera_offset_x = 0
+        self.player_damage_dealt = False
+
     def _spawn_enemy(self):
         """Tenta spawnar um novo inimigo em um dos pontos de spawn aleatoriamente."""
         if len(self.enemies) < self.max_enemies_on_screen:
 
-            # 1. Seleciona um ponto de spawn aleatório
-            # É importante que a lista self.SPAWN_POINTS não esteja vazia
             if not self.SPAWN_POINTS:
                 print("ERRO: Nenhuma posição de spawn configurada!")
                 return False
 
-            random_spawn_pos = random.choice(self.SPAWN_POINTS) # <--- Escolha aleatória
+            random_spawn_pos = random.choice(self.SPAWN_POINTS)
 
-            # 2. Cria o inimigo no ponto selecionado
             new_enemy = Enemy(
-                start_pos=random_spawn_pos, # <--- Usando o ponto aleatório
+                start_pos=random_spawn_pos,
                 enemy_type='tooth',
                 assets=self.entity_assets,
                 game_map=GAME_MAP
@@ -129,8 +133,6 @@ class Game:
             self.spawn_timer = 0
             return True
         return False
-
-    # --- FIM NOVO MeTODO ---
 
     # ----------------------------------------------------------------------
     ## Criação de Nível (Inimigos removidos do mapa)
@@ -141,15 +143,18 @@ class Game:
         for y, row in enumerate(GAME_MAP):
             for x, char in enumerate(row):
                 pos = (x * TILE_SIZE, y * TILE_SIZE)
-
-                # REMOVIDO: a criação de inimigos 'E'
-                # if char == 'E':
+                # if char == 'V':
                 #     self.enemies.add(Enemy(pos, 'tooth', self.entity_assets, GAME_MAP))
-
                 if char == '$':
                     self.items.add(Item(pos, 'coin', self.entity_assets))
                 elif char == 'T':
                     self.traps.add(Trap(pos, 'spike_ball', self.entity_assets))
+                # --- 2. INIMIGOS FIXOS (Seashell) ---
+                # 'V' para Seashell, conforme seu Const.py
+                elif char == 'V':
+                    new_enemy = Enemy(start_pos=pos, enemy_type='seashell', assets=self.entity_assets, game_map=GAME_MAP)
+                    self.enemies.add(new_enemy)
+                # O código 'V' será substituído por ' ' logo abaixo
 
                 if char in DECORATION_MAP_CODES:
                     asset_key = DECORATION_MAP_CODES[char]
@@ -159,7 +164,6 @@ class Game:
 
     def _scroll_camera(self):
         """Calcula o offset da câmera baseado na posição do jogador."""
-        # ... (lógica inalterada) ...
         if not self.player: return
 
         screen_pos_x = self.player.pos[0] + self.camera_offset_x
@@ -205,9 +209,8 @@ class Game:
 
                 # 2. Dano do Player ao Inimigo (NOVO: ADICIONA SCORE SE O INIMIGO MORRER)
             if self.player.is_attacking and not self.player_damage_dealt:
-                # Se receive_damage retornar True, o inimigo morreu agora.
                 if enemy.receive_damage(25):
-                    self.score += 10  # PONTUAÇÃO POR MORTE DE INIMIGO!
+                    self.score += 10
                 self.player_damage_dealt = True
 
                 # Colisão com Armadilhas (MANTIDO)
@@ -219,20 +222,20 @@ class Game:
     def update(self):
         """Atualiza a lógica do jogo (físicas, animações, entidades, etc.)."""
 
-        # 1. NOVO: LÓGICA DE VITÓRIA (FIM DE JOGO POR SCORE)
+        # 1. LÓGICA DE VITÓRIA (FIM DE JOGO POR SCORE)
         if self.score >= self.SCORE_TO_WIN:
             print(f"Vitória! Score {self.score}/{self.SCORE_TO_WIN}. Fim de Jogo!")
-            self.is_playing = False  # Trava o jogo
-            return  # Sai do update
+            self.is_playing = False
+            return  # Retorna para o MENU no próximo run()
 
-        # 2. LÓGICA DE MORTE E RESPAWN (MANTIDA)
+        # 2. LÓGICA DE MORTE E RESPAWN (CORRIGIDO)
         if self.player and self.player.is_dead:
             self.death_timer += 1
             if self.death_timer >= self.respawn_delay:
-                self.setup_level()
+                self._player_respawn()  # <-- RESPAWN DO PLAYER
             return
 
-        # 3. NOVO: LÓGICA DE SPAWN CONTÍNUO
+        # 3. LÓGICA DE SPAWN CONTÍNUO
         self.spawn_timer += 1
         if self.spawn_timer >= self.SPAWN_COOLDOWN:
             self._spawn_enemy()
@@ -251,7 +254,7 @@ class Game:
         self.traps.update(self.camera_offset_x)
         self.decorations.update(self.camera_offset_x)
 
-        # 5. Remoção de Inimigos Mortos (Faz o inimigo sumir após a animação de morte)
+        # 5. Remoção de Inimigos Mortos
         for enemy in self.enemies.copy():
             if enemy.is_dead and hasattr(enemy, 'kill_flag') and enemy.kill_flag:
                 enemy.kill()
@@ -262,7 +265,6 @@ class Game:
 
     def _get_depth_sorted_sprites(self):
         # MANTIDO
-        # ...
         if not self.player: return []
 
         sprites_to_sort = list(self.decorations.sprites())
@@ -304,8 +306,6 @@ class Game:
 
     # --- Funções Auxiliares de Desenho (Inalteradas) ---
     def _update_background_and_clouds(self):
-        # MANTIDO
-        # ...
         self.screen.blit(self.background_assets['background'], (0, 0))
 
         pos = self.cloud_pos['big_clouds_pos']
@@ -346,9 +346,6 @@ class Game:
         self.screen.blit(self.background_assets['small_cloud_3'], (650 + pos3 + 1500, 250))
 
     def _animate_water(self, water_type, pos_list):
-        """Gerencia a animação e o desenho das reflexões da água."""
-        # MANTIDO
-        # ...
         assets = self.background_assets[water_type]
         frame = self.water_animation_frame[water_type]
 
@@ -361,9 +358,6 @@ class Game:
         self.water_animation_frame[water_type] = frame
 
     def _draw_tiles(self):
-        """Desenha o mapa do jogo, aplicando o offset da câmera."""
-        # MANTIDO
-        # ...
         for y, row in enumerate(GAME_MAP):
             for x, tile_char in enumerate(row):
                 if tile_char != ' ':
@@ -376,7 +370,6 @@ class Game:
 
         if not self.player: return 'GAME'
 
-        # Não permite input de movimento se o player estiver morto
         if self.player.is_dead:
             if key_event_key == pg.K_ESCAPE:
                 return 'QUIT'
@@ -401,10 +394,15 @@ class Game:
     # ----------------------------------------------------------------------
 
     def run(self, keys_pressed, key_event_key=None):
-        """Executa um frame do jogo. Retorna o estado do jogo (GAME ou QUIT)."""
+        """Executa um frame do jogo. Retorna o estado do jogo (GAME, MENU ou QUIT)."""
 
+        # Se o jogo não está ativo (transição de MENU para GAME), inicializa tudo.
+        if not self.is_playing or self.player is None:
+            self._start_new_level()
+
+        # Se o score atingiu a meta, ele retornará 'MENU' no próximo frame.
         if not self.is_playing:
-            self.setup_level()
+            return 'MENU'
 
         game_state = self._handle_input(keys_pressed, key_event_key)
         if game_state == 'QUIT':

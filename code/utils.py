@@ -127,14 +127,11 @@ def load_entity_assets(assets=None):
 
     tooth_size = (64, 64)
     tooth_base_path = './asset/enemies/Fierce Tooth/'
-
-    # 1. ATUALIZADO: ESTRUTURA PARA SUPORTAR TODOS OS ESTADOS DE COMBATE DO INIMIGO
     assets['tooth'] = {'idle': [], 'run': [], 'hit': [], 'death': [], 'attack': []}
 
     # Carrega IDLE
     for i in range(1, 8):  # Assumindo frames 1 a 8 para Idle
         assets['tooth']['idle'].append(load_and_scale_image(f'{tooth_base_path}Idle/Idle {i:02d}.png', tooth_size))
-    # path = f'{base_path}Idle/Idle {i:02d}.png'
     # Carrega RUN (perseguição)
     for i in range(1, 6):  # Assumindo frames 1 a 5 para Run (ou o que estiver disponível)
         assets['tooth']['run'].append(load_and_scale_image(f'{tooth_base_path}Run/Run {i:02d}.png', tooth_size))
@@ -150,6 +147,30 @@ def load_entity_assets(assets=None):
         # NOVO: DEATH (Morte)
     for i in range(1, 4):  # Exemplo: 5 frames
         assets['tooth']['death'].append(load_and_scale_image(f'{tooth_base_path}Dead Hit/Dead Hit {i:02d}.png', tooth_size))
+
+        # --- 2. Seashell (NOVO INIMIGO: Inimigo Aéreo/Flutuante) ---
+        seashell_size = (76, 46)  #
+        seashell_base_path = './asset/enemies/seashell/'
+        assets['seashell'] = {'idle': [], 'attack': []}
+
+        # Carrega Seashell - IDLE (Pode ser o estado de "flutuação")
+        for i in range(1, 2):  # Ajuste o range conforme seus frames
+            assets['seashell']['idle'].append(load_and_scale_image(f'{seashell_base_path}Idle/idle {i:02d}.png', seashell_size))
+
+        # Carrega Seashel - ATTACK
+        for i in range(1, 7):  # Ajuste o range conforme seus frames
+            assets['seashell']['attack'].append(
+                load_and_scale_image(f'{seashell_base_path}Attack/Attack {i:02d}.png', seashell_size))
+
+        # 3. Exemplo: Moeda
+        coin_size = (32, 32)
+        assets['coin'] = []
+        coin_base_path = './asset/items/coin/Gold Coin/'
+        for i in range(1, 5):
+            assets['coin'].append(load_and_scale_image(f'{coin_base_path}{i}.png', coin_size))
+
+        # 4. Exemplo: Espeto (Trap)
+        assets['spike_ball'] = load_and_scale_image('./asset/trap/spike_ball/Spiked Ball.png', (TILE_SIZE, TILE_SIZE))
 
     # 2. Exemplo: Moeda
     coin_size = (32, 32)

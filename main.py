@@ -20,7 +20,8 @@ def main():
     # Instâncias de Menu e Game
     current_state = 'MENU'
     menu = Menu(screen)
-    game = Game(screen)  # O jogo é inicializado fora do loop para manter os assets carregados
+    # O jogo é inicializado fora do loop para manter os assets carregados e o estado
+    game = Game(screen)
 
     running = True
     while running:
@@ -34,22 +35,33 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 running = False
+            # Captura a tecla pressionada APENAS no evento KEYDOWN para o menu e ações pontuais no jogo
             if event.type == pg.KEYDOWN:
                 key_event_key = event.key
 
-        # 2. Transição de Estados
+        # Se o evento de QUIT foi detectado, saímos imediatamente
+        if not running:
+            break
+
+        # 2. Transição e Execução de Estados
         next_state = current_state
 
         if current_state == 'MENU':
+            # O menu lida com o input do teclado e retorna 'GAME' ou 'QUIT'
             next_state = menu.run(key_event_key)
 
-        elif current_state == 'GAME':
-            # O mouse_has_clicked do original foi removido/simplificado para manter o foco
-            # na estrutura e lógica central do jogo
+            # Se o menu retorna 'GAME', preparamos o jogo para iniciar na próxima iteração
+            if next_state == 'GAME':
+                # Reinicia o nível (necessário após voltar do menu)
+                game._start_new_level()
 
-            # Passa as teclas pressionadas (para movimento contínuo) e a tecla do evento (para ações de pulo/escape)
+        elif current_state == 'GAME':
+            # O jogo lida com o input e retorna 'GAME', 'MENU' (se perder/ganhar) ou 'QUIT'
+
+            # Passa as teclas pressionadas (para movimento contínuo) e a tecla do evento (para ações)
             next_state = game.run(keys_pressed, key_event_key)
 
+        # 3. Gerenciamento do Estado
         if next_state == 'QUIT':
             running = False
         elif next_state != current_state:
@@ -60,4 +72,6 @@ def main():
 
 
 if __name__ == '__main__':
+    # Nota: Assumi que você tem a constante 'SCREEN_SIZE' e as classes 'Game' e 'Menu'
+    # disponíveis para importação conforme o código.
     main()
